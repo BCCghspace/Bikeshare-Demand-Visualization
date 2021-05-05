@@ -10,10 +10,16 @@
 var bikeshare;
 var groupbyid;
 var filterbikeshare;
+var groupStation;
 var dotwall;
 var countrec;
 var labelrec;
 var datafl;
+
+var marker;
+var markers = [];
+var markersLayer = new L.LayerGroup();
+
 
 /* =====================
   Map Setup
@@ -83,11 +89,18 @@ $.ajax('https://raw.githubusercontent.com/BCCghspace/data/main/2018w44.json?toke
   //   return r;
   // }, []);
 
-  groupbyid.forEach(function(record){
-    var pathOpts = {'radius': record.count / 30};
-    L.circleMarker([record.start_lat, record.start_lon], pathOpts)
-      .bindPopup(record.name)
-      .addTo(map);})
+//   markers = groupbyid.forEach(function(record){
+//     var pathOpts = {'radius': record.count / 30};
+//       marker = L.circleMarker([record.start_lat, record.start_lon], pathOpts)
+//       .bindPopup(record.name + " has " + record.count + " riders.")
+//       .addTo(map)
+//       markersLayer.addLayer(marker);
+// //       .on('click', function(e) {
+// //     console.log(e.latlng);
+// // })
+// ;})
+// markersLayer.addTo(map);
+
 });
 
 //////////////////////////////////////filter data
@@ -119,17 +132,48 @@ var getServiceFilter = function(){
 }
 
 $(".record-filters").on("change", function() {
+  markersLayer.clearLayers();
   dotwfilter = getDotwFilter()
   servicefilter = getServiceFilter()
   filterbikeshare = bikeshare.filter(function(rec){
     return dotwfilter(rec) && servicefilter(rec)
   })
+  groupStation = _.groupBy(filterbikeshare, function(rec){return rec.name});
+
+  // if(markers){
+  //   // markers.clearLayers();
+  //   markersLayer.clearLayers();
+  //   markers = _.toArray(groupStation).forEach(function(record){
+  //     var pathOpts = {'radius': record.length / 20};
+  //       marker = L.circleMarker([record[0].start_lat, record[0].start_lon], pathOpts)
+  //       .bindPopup(record[0].name + " has " + record[0].count + " riders.")
+  //       markersLayer.addLayer(marker);
+  // //       .on('click', function(e) {
+  // //     console.log(e.latlng);
+  // // })
+  // })
+  // markersLayer.addTo(map);
+  // }
+  // else{
+    // markers.clearLayers();
+    // markersLayer.clearLayers();
+    markers = _.toArray(groupStation).forEach(function(record){
+      var pathOpts = {'radius': record.length / 20};
+        marker = L.circleMarker([record[0].start_lat, record[0].start_lon], pathOpts)
+        .bindPopup(record[0].name + " has " + record[0].count + " riders.")
+        markersLayer.addLayer(marker);
+  //       .on('click', function(e) {
+  //     console.log(e.latlng);
+  // })
+  })
+  markersLayer.addTo(map);
+  // }
 });
 
 
 ///var Wed = bikeshare.filter(function(rec){return rec.dotw == "Wed"})
 ///_.groupBy(Wed, function(rec){return rec.interval60})
-var chartdata = function(dotwall, filterbikeshare){
+var linecount = function(dotwall, filterbikeshare){
   if(dotwall){
     countrec = _.countBy(filterbikeshare,function(rec){return rec.dotw})
     return countrec
@@ -139,18 +183,20 @@ var chartdata = function(dotwall, filterbikeshare){
   }
 }
 
+var piecount = _.countBy(filterbikeshare,function(rec){return rec.passholder_type})
+
 var datarec = function(dotwall, filterbikeshare){
-  countrec = chartdata(dotwall, filterbikeshare)
+  countrec = linecount(dotwall, filterbikeshare)
   if(dotwall){
     datafl = [countrec.Mon, countrec.Tue, countrec.Wed, countrec.Thu, countrec.Fri, countrec.Sat, countrec.Sun]
     return datafl
   } else {
-    datafl = [countrec[2018-10-29 00:00:00], countrec[2018-10-29 01:00:00], countrec[2018-10-29 02:00:00], countrec[2018-10-29 03:00:00],
-              countrec[2018-10-29 04:00:00], countrec[2018-10-29 05:00:00], countrec[2018-10-29 06:00:00], countrec[2018-10-29 07:00:00],
-              countrec[2018-10-29 08:00:00], countrec[2018-10-29 09:00:00], countrec[2018-10-29 10:00:00], countrec[2018-10-29 11:00:00],
-              countrec[2018-10-29 12:00:00], countrec[2018-10-29 13:00:00], countrec[2018-10-29 14:00:00], countrec[2018-10-29 15:00:00],
-              countrec[2018-10-29 16:00:00], countrec[2018-10-29 17:00:00], countrec[2018-10-29 18:00:00], countrec[2018-10-29 19:00:00],
-              countrec[2018-10-29 20:00:00], countrec[2018-10-29 21:00:00], countrec[2018-10-29 22:00:00], countrec[2018-10-29 23:00:00]]
+    datafl = [countrec['2018-10-29 00:00:00'], countrec['2018-10-29 01:00:00'], countrec['2018-10-29 02:00:00'], countrec['2018-10-29 03:00:00'],
+              countrec['2018-10-29 04:00:00'], countrec['2018-10-29 05:00:00'], countrec['2018-10-29 06:00:00'], countrec['2018-10-29 07:00:00'],
+              countrec['2018-10-29 08:00:00'], countrec['2018-10-29 09:00:00'], countrec['2018-10-29 10:00:00'], countrec['2018-10-29 11:00:00'],
+              countrec['2018-10-29 12:00:00'], countrec['2018-10-29 13:00:00'], countrec['2018-10-29 14:00:00'], countrec['2018-10-29 15:00:00'],
+              countrec['2018-10-29 16:00:00'], countrec['2018-10-29 17:00:00'], countrec['2018-10-29 18:00:00'], countrec['2018-10-29 19:00:00'],
+              countrec['2018-10-29 20:00:00'], countrec['2018-10-29 21:00:00'], countrec['2018-10-29 22:00:00'], countrec['2018-10-29 23:00:00']]
     return datafl
   }
 }
@@ -214,7 +260,6 @@ var updateLineChart = function(dotwall, filterbikeshare){
   }
 }
 
-var piecount = _.countBy(filterbikeshare,function(rec){return rec.passholder_type})
 var createPieChart = function(piecount){
   var ctx = document.getElementById('myPieChart').getContext('2d');
   var piechart = new Chart(ctx, {
@@ -266,32 +311,32 @@ var updatePieChart = function(piecount){
 //   zipcodeData = JSON.parse(zipcodeRes[0])
 //   zipcodeVaccData = JSON.parse(zipcodeVaccRes[0])
 //   zipcodePopData = JSON.parse(zipcodePopRes[0])
-//
-//   L.geoJSON(zipcodeData, {
-//     onEachFeature: function(feat, layer){
-//       layer.on('click', function(e){
-//         var zipcode = feat.properties.CODE
-//         var vaccinationData = zipcodeVaccData[zipcode]
-//         var populationData = zipcodePopData.filter(function(datum){
-//           return datum.zip === Number(zipcode)
-//         })[0]
-//
-//         //set uup for the bar chart
-//         if (barchart){
-//           updateBarChart(vaccinationData)
-//         } else {
-//           createBarChart(vaccinationData)
-//         }
-//
-//         //set up bar chart
-//         if (piechart){
-//           updatePieChart(populationData, vaccinationData)
-//         } else {
-//           createPieChart(populationData, vaccinationData)
-//         }
-//       })
-//     }
-//   }).addTo(map)
+
+  // L.geoJSON(zipcodeData, {
+  //   onEachFeature: function(feat, layer){
+  //     layer.on('click', function(e){
+  //       var zipcode = feat.properties.CODE
+  //       var vaccinationData = zipcodeVaccData[zipcode]
+  //       var populationData = zipcodePopData.filter(function(datum){
+  //         return datum.zip === Number(zipcode)
+  //       })[0]
+  //
+  //       //set uup for the bar chart
+  //       if (barchart){
+  //         updateBarChart(vaccinationData)
+  //       } else {
+  //         createBarChart(vaccinationData)
+  //       }
+  //
+  //       //set up bar chart
+  //       if (piechart){
+  //         updatePieChart(populationData, vaccinationData)
+  //       } else {
+  //         createPieChart(populationData, vaccinationData)
+  //       }
+  //     })
+  //   }
+  // }).addTo(map)
 // })
 
 // $.ajax(zipcodes).done(function(res){
