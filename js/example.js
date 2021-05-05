@@ -9,9 +9,11 @@
 // var baseHexStyle = { stroke: false }
 var bikeshare;
 var groupbyid;
-var dotwdata;
-var passdata;
 var filterbikeshare;
+var dotwall;
+var countrec;
+var labelrec;
+var datafl;
 
 /* =====================
   Map Setup
@@ -81,8 +83,6 @@ $.ajax('https://raw.githubusercontent.com/BCCghspace/data/main/2018w44.json?toke
   //   return r;
   // }, []);
 
-  console.log(passdata);
-
   groupbyid.forEach(function(record){
     var pathOpts = {'radius': record.count / 30};
     L.circleMarker([record.start_lat, record.start_lon], pathOpts)
@@ -94,6 +94,7 @@ $.ajax('https://raw.githubusercontent.com/BCCghspace/data/main/2018w44.json?toke
 var getDotwFilter = function(){
   dotw = $("#dotw").val()
   if (dotw == "All"){
+    dotwall = true
     return function(rec){
       return true
     }
@@ -116,8 +117,7 @@ var getServiceFilter = function(){
     }
   }
 }
-//_.countBy(filterbikeshare,function(rec){return rec.interval60})
-//$(document).ready(function(){
+
 $(".record-filters").on("change", function() {
   dotwfilter = getDotwFilter()
   servicefilter = getServiceFilter()
@@ -125,106 +125,143 @@ $(".record-filters").on("change", function() {
     return dotwfilter(rec) && servicefilter(rec)
   })
 });
-//});
+
 
 ///var Wed = bikeshare.filter(function(rec){return rec.dotw == "Wed"})
 ///_.groupBy(Wed, function(rec){return rec.interval60})
+var chartdata = function(dotwall, filterbikeshare){
+  if(dotwall){
+    countrec = _.countBy(filterbikeshare,function(rec){return rec.dotw})
+    return countrec
+  } else {
+    countrec = _.countBy(filterbikeshare,function(rec){return rec.interval60})
+    return countrec
+  }
+}
+
+var datarec = function(dotwall, filterbikeshare){
+  countrec = chartdata(dotwall, filterbikeshare)
+  if(dotwall){
+    datafl = [countrec.Mon, countrec.Tue, countrec.Wed, countrec.Thu, countrec.Fri, countrec.Sat, countrec.Sun]
+    return datafl
+  } else {
+    datafl = [countrec[2018-10-29 00:00:00], countrec[2018-10-29 01:00:00], countrec[2018-10-29 02:00:00], countrec[2018-10-29 03:00:00],
+              countrec[2018-10-29 04:00:00], countrec[2018-10-29 05:00:00], countrec[2018-10-29 06:00:00], countrec[2018-10-29 07:00:00],
+              countrec[2018-10-29 08:00:00], countrec[2018-10-29 09:00:00], countrec[2018-10-29 10:00:00], countrec[2018-10-29 11:00:00],
+              countrec[2018-10-29 12:00:00], countrec[2018-10-29 13:00:00], countrec[2018-10-29 14:00:00], countrec[2018-10-29 15:00:00],
+              countrec[2018-10-29 16:00:00], countrec[2018-10-29 17:00:00], countrec[2018-10-29 18:00:00], countrec[2018-10-29 19:00:00],
+              countrec[2018-10-29 20:00:00], countrec[2018-10-29 21:00:00], countrec[2018-10-29 22:00:00], countrec[2018-10-29 23:00:00]]
+    return datafl
+  }
+}
+
+var chartlabel = function(dotwall){
+  if(dotwall){
+    labelrec = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    return labelrec
+  } else {
+    labelrec = ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23']
+    return labelrec
+  }
+}
 
 ////////////////////////////////////////create charts
-// var createLineChart = function(filterbikeshare) {
-//   var ctx = document.getElementById('myLineChart').getContext('2d');
-//   linechart = new Chart(ctx, {
-//       type: 'line',
-//       data: {
-//           labels: 'day of the week',
-//           datasets: [{
-//               label: ['Red', 'Blue'],
-//               data: [vaccData.partially_vaccinated, vaccData.fully_vaccinated],
-//               backgroundColor: [
-//                   'rgba(255, 99, 132, 0.2)',
-//                   'rgba(54, 162, 235, 0.2)',
-//                   'rgba(255, 206, 86, 0.2)',
-//                   'rgba(75, 192, 192, 0.2)',
-//                   'rgba(153, 102, 255, 0.2)',
-//                   'rgba(255, 159, 64, 0.2)',
-//                   'rgba(194, 48, 213, 0.2)'
-//               ],
-//               borderColor: [
-//                   'rgba(255, 99, 132, 1)',
-//                   'rgba(54, 162, 235, 1)',
-//                   'rgba(255, 206, 86, 1)',
-//                   'rgba(75, 192, 192, 1)',
-//                   'rgba(153, 102, 255, 1)',
-//                   'rgba(255, 159, 64, 1)',
-//                   'rgba(194, 48, 213, 1)'
-//               ],
-//               borderWidth: 1
-//           }]
-//       },
-//       options: {
-//           scales: {
-//               y: {
-//                   beginAtZero: true
-//               }
-//           }
-//       }
-//   })
-// };
-//
-// var updateLineChart = function(vaccData){
-//   barchart.data.datasets[0].data[0]=vaccData.partially_vaccinated
-//   barchart.data.datasets[0].data[1]=vaccData.fully_vaccinated
-//   barchart.update()
-// }
-//
-// var createPieChart = function(popData, vaccData){
-//   var unvaccinated = popData.pop - vaccData.partially_vaccinated - vaccData.fully_vaccinated
-//   var ctx = document.getElementById('myPieChart').getContext('2d');
-//   var piechart = new Chart(ctx, {
-//       type: 'doughnut',
-//       data: {
-//           labels: ['Unvaccinated','Partial', 'Full'],
-//           datasets: [{
-//               label: 'Vaccinations',
-//               data: [unvaccinated, vaccData.partially_vaccinated, vaccData.fully_vaccinated],
-//               backgroundColor: [
-//                   'rgba(255, 99, 132, 0.2)',
-//                   'rgba(54, 162, 235, 0.2)',
-//                   'rgba(255, 206, 86, 0.2)'
-//                   // 'rgba(75, 192, 192, 0.2)',
-//                   // 'rgba(153, 102, 255, 0.2)',
-//                   // 'rgba(255, 159, 64, 0.2)'
-//               ],
-//               // borderColor: [
-//               //     'rgba(255, 99, 132, 1)',
-//               //     'rgba(54, 162, 235, 1)',
-//               //     'rgba(255, 206, 86, 1)'
-//               //     // 'rgba(75, 192, 192, 1)',
-//               //     // 'rgba(153, 102, 255, 1)',
-//               //     // 'rgba(255, 159, 64, 1)'
-//               // ],
-//               //borderWidth: 1
-//               hoverOffset: 4
-//           }]
-//       },
-//       // options: {
-//       //     scales: {
-//       //         y: {
-//       //             beginAtZero: true
-//       //         }
-//       //     }
-//       // }
-//   })
-// }
-//
-// var updatePieChart = function(popData, vaccData){
-//   var unvaccinated = popData.pop - vaccData.partially_vaccinated - vaccData.fully_vaccinated
-//   piechart.data.datasets[0].data[0]=vaccData.unvaccinated
-//   piechart.data.datasets[0].data[1]=vaccData.fully_vaccinated
-//   piechart.data.datasets[0].data[3]=vaccData.partially_vaccinated
-//   piechart.update()
-// }
-//
+var createLineChart = function(dotwall, filterbikeshare) {
+  var ctx = document.getElementById('myLineChart').getContext('2d');
+  linechart = new Chart(ctx, {
+      type: 'line',
+      data: {
+          labels: 'day of the week / hour of the day',
+          datasets: [{
+              label: chartlabel(dotwall),
+              data: datarec(dotwall, filterbikeshare),
+              backgroundColor: [
+                  'rgba(255, 99, 132, 0.2)'
+                  // 'rgba(54, 162, 235, 0.2)',
+                  // 'rgba(255, 206, 86, 0.2)',
+                  // 'rgba(75, 192, 192, 0.2)',
+                  // 'rgba(153, 102, 255, 0.2)',
+                  // 'rgba(255, 159, 64, 0.2)',
+                  // 'rgba(194, 48, 213, 0.2)'
+              ],
+              borderColor: [
+                  'rgba(255, 99, 132, 1)'
+                  // 'rgba(54, 162, 235, 1)',
+                  // 'rgba(255, 206, 86, 1)',
+                  // 'rgba(75, 192, 192, 1)',
+                  // 'rgba(153, 102, 255, 1)',
+                  // 'rgba(255, 159, 64, 1)',
+                  // 'rgba(194, 48, 213, 1)'
+              ],
+              borderWidth: 1
+          }]
+      },
+      options: {
+          scales: {
+              y: {
+                  beginAtZero: true
+              }
+          }
+      }
+  })
+};
+//https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers
+var updateLineChart = function(dotwall, filterbikeshare){
+  datafl = datarec(dotwall, filterbikeshare)
+  for (i = 0; i < linechart.data.datasets[0].data.length; i++) {
+  linechart.data.datasets[0].data[i]=datarec(dotwall, filterbikeshare)[i];
+  linechart.update();
+  }
+}
+
+var piecount = _.countBy(filterbikeshare,function(rec){return rec.passholder_type})
+var createPieChart = function(piecount){
+  var ctx = document.getElementById('myPieChart').getContext('2d');
+  var piechart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+          labels: ['Indego30','Indego365', 'Day Pass', 'Walk In'],
+          datasets: [{
+              label: 'Passes',
+              data: [piecount.Indego30, piecount.Indego365, piecount.DayPass, piecount.Walkin],
+              backgroundColor: [
+                  'rgba(255, 99, 132, 0.2)',
+                  'rgba(54, 162, 235, 0.2)',
+                  'rgba(255, 206, 86, 0.2)',
+                  'rgba(75, 192, 192, 0.2)'
+                  // 'rgba(153, 102, 255, 0.2)',
+                  // 'rgba(255, 159, 64, 0.2)'
+              ],
+              // borderColor: [
+              //     'rgba(255, 99, 132, 1)',
+              //     'rgba(54, 162, 235, 1)',
+              //     'rgba(255, 206, 86, 1)'
+              //     // 'rgba(75, 192, 192, 1)',
+              //     // 'rgba(153, 102, 255, 1)',
+              //     // 'rgba(255, 159, 64, 1)'
+              // ],
+              //borderWidth: 1
+              hoverOffset: 4
+          }]
+      },
+      // options: {
+      //     scales: {
+      //         y: {
+      //             beginAtZero: true
+      //         }
+      //     }
+      // }
+  })
+}
+
+var updatePieChart = function(piecount){
+  piechart.data.datasets[0].data[0]=piecount.Indego30
+  piechart.data.datasets[0].data[1]=piecount.Indego365
+  piechart.data.datasets[0].data[2]=piecount.DayPass
+  piechart.data.datasets[0].data[3]=piecount.Walkin
+  piechart.update()
+}
+
 // $.when($.ajax(zipcodeURL), $.ajax(zipcodeVaccURL), $.ajax(zipcodePopURL)).then(function(zipcodeRes, zipcodeVaccRes, zipcodePopRes) {
 //   zipcodeData = JSON.parse(zipcodeRes[0])
 //   zipcodeVaccData = JSON.parse(zipcodeVaccRes[0])
