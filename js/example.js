@@ -8,9 +8,11 @@
 // var piechart
 // var baseHexStyle = { stroke: false }
 var bikeshare;
-var groupbyid;
+//var groupbyid;
 var filterbikeshare;
 var groupStation;
+var stndotw;
+var stnpass;
 var dotwall;
 var countrec;
 var labelrec;
@@ -46,18 +48,30 @@ var Stamen_TonerLite = L.tileLayer('http://stamen-tiles-{s}.a.ssl.fastly.net/ton
 $.ajax('https://raw.githubusercontent.com/BCCghspace/data/main/2018w44.json?token=AQ2OW56HXIWJ4LD6G3FMKALATK52C').done(function(data) {
   bikeshare = JSON.parse(data);
   console.log(bikeshare)
-  groupbyid = [];
-  bikeshare.reduce(function(res, value) {
-    if (!res[value.name]) {
-      res[value.name] = { name: value.name, count: 0 };
-      groupbyid.push(res[value.name])
-    }
-    res[value.name].count += value.count;
-    res[value.name].start_lat = value.start_lat;
-    res[value.name].start_lon = value.start_lon;
-    return groupbyid;
-  }, {});
-  console.log(groupbyid);
+  filterbikeshare = bikeshare
+  groupStation = _.groupBy(filterbikeshare, function(rec){return rec.name});
+  markers = _.toArray(groupStation).forEach(function(record){
+    var pathOpts = {'radius': record.length / 20};
+      marker = L.circleMarker([record[0].start_lat, record[0].start_lon], pathOpts)
+      .bindPopup(record[0].name + " has " + record[0].count + " riders.")
+      markersLayer.addLayer(marker);
+//       .on('click', function(e) {
+//     console.log(e.latlng);
+// })
+})
+markersLayer.addTo(map);
+  // groupbyid = [];
+  // bikeshare.reduce(function(res, value) {
+  //   if (!res[value.name]) {
+  //     res[value.name] = { name: value.name, count: 0 };
+  //     groupbyid.push(res[value.name])
+  //   }
+  //   res[value.name].count += value.count;
+  //   res[value.name].start_lat = value.start_lat;
+  //   res[value.name].start_lon = value.start_lon;
+  //   return groupbyid;
+  // }, {});
+  // console.log(groupbyid);
 
   // var helper = {};
   // var helper1 = {};
@@ -104,6 +118,28 @@ $.ajax('https://raw.githubusercontent.com/BCCghspace/data/main/2018w44.json?toke
 });
 
 //////////////////////////////////////filter data
+// function arrayFromObject(obj) {
+//     var arr = [];
+//     for (var i in obj) {
+//         arr.push(obj[i]);
+//     }
+//     return arr;
+// }
+//
+// function groupBy(list, fn) {
+//     var groups = {};
+//     for (var i = 0; i < list.length; i++) {
+//         var group = JSON.stringify(fn(list[i]));
+//         if (group in groups) {
+//             groups[group].push(list[i]);
+//         } else {
+//             groups[group] = [list[i]];
+//         }
+//     }
+//     return arrayFromObject(groups);
+// }
+
+
 var getDotwFilter = function(){
   dotw = $("#dotw").val()
   if (dotw == "All"){
@@ -138,8 +174,10 @@ $(".record-filters").on("change", function() {
   filterbikeshare = bikeshare.filter(function(rec){
     return dotwfilter(rec) && servicefilter(rec)
   })
-  groupStation = _.groupBy(filterbikeshare, function(rec){return rec.name});
 
+  groupStation = _.groupBy(filterbikeshare, function(rec){return rec.name});
+  stndotw = _.toArray(groupStation).map(function(x){_.countBy(x,function(rec){return rec.interval60})})
+  // stndotw = _.groupBy(groupStation[1],function(rec){return rec.dotw})
   // if(markers){
   //   // markers.clearLayers();
   //   markersLayer.clearLayers();
@@ -169,6 +207,22 @@ $(".record-filters").on("change", function() {
   markersLayer.addTo(map);
   // }
 });
+
+/////////////////function count by more than one properties
+// var countbytwo = function(list, key1, key2) {
+//   list.reduce(function (accumulator, list) {
+//     for (i = 0; i < list.length; i++) {
+//       // Group by key1.
+//       accumulator[i].key1s[list[i].key1] = accumulator[i].key1s[list[i].key1] || [];
+//       accumulator[i].key1s[list[i].key1].push(list[i].key2);
+//
+//       // Group by key2.
+//       accumulator[i].key2s[list[i].key2] = accumulator[i].key2s[list[i].key2] || [];
+//       accumulator[i].key2s[list[i].key2].push(list[i].key1);
+//       return accumulator;
+//     }
+//   }, {key1s: {}, key2s: {}});
+// }
 
 
 ///var Wed = bikeshare.filter(function(rec){return rec.dotw == "Wed"})
@@ -312,31 +366,53 @@ var updatePieChart = function(piecount){
 //   zipcodeVaccData = JSON.parse(zipcodeVaccRes[0])
 //   zipcodePopData = JSON.parse(zipcodePopRes[0])
 
-  // L.geoJSON(zipcodeData, {
-  //   onEachFeature: function(feat, layer){
-  //     layer.on('click', function(e){
-  //       var zipcode = feat.properties.CODE
-  //       var vaccinationData = zipcodeVaccData[zipcode]
-  //       var populationData = zipcodePopData.filter(function(datum){
-  //         return datum.zip === Number(zipcode)
-  //       })[0]
-  //
-  //       //set uup for the bar chart
-  //       if (barchart){
-  //         updateBarChart(vaccinationData)
-  //       } else {
-  //         createBarChart(vaccinationData)
-  //       }
-  //
-  //       //set up bar chart
-  //       if (piechart){
-  //         updatePieChart(populationData, vaccinationData)
-  //       } else {
-  //         createPieChart(populationData, vaccinationData)
-  //       }
-  //     })
-  //   }
-  // }).addTo(map)
+markersLayer.on("click", markerOnClick);
+var markerOnClick =  function(e){
+    if (barchart){
+      updateBarChart(vaccinationData)
+    } else {
+      createBarChart(vaccinationData)
+    }
+
+    //set up bar chart
+    if (piechart){
+      updatePieChart(populationData, vaccinationData)
+    } else {
+      createPieChart(populationData, vaccinationData)
+    }
+}
+
+function markerOnClick(e) {
+  var attributes = e.layer.properties;
+  console.log(attributes.name, attributes.desctiption, attributes.othervars);
+  // do some stuff…
+}
+
+//   L.geoJSON(zipcodeData, {
+//     onEachFeature: function(feat, layer){
+//       layer.on('click', function(e){
+//         var zipcode = feat.properties.CODE
+//         var vaccinationData = zipcodeVaccData[zipcode]
+//         var populationData = zipcodePopData.filter(function(datum){
+//           return datum.zip === Number(zipcode)
+//         })[0]
+//
+//         //set uup for the bar chart
+//         if (barchart){
+//           updateBarChart(vaccinationData)
+//         } else {
+//           createBarChart(vaccinationData)
+//         }
+//
+//         //set up bar chart
+//         if (piechart){
+//           updatePieChart(populationData, vaccinationData)
+//         } else {
+//           createPieChart(populationData, vaccinationData)
+//         }
+//       })
+//     }
+//   }).addTo(map)
 // })
 
 // $.ajax(zipcodes).done(function(res){
