@@ -11,12 +11,17 @@ var bikeshare;
 //var groupbyid;
 var filterbikeshare;
 var groupStation;
+var countStation;
 var stndotw;
 var stnpass;
 var dotwall;
 var countrec;
 var labelrec;
 var datafl;
+
+var countStnHours;
+var countStnDotw;
+var countStnPass;
 
 var marker;
 var markers = [];
@@ -49,6 +54,8 @@ $.ajax('https://raw.githubusercontent.com/BCCghspace/data/main/2018w44.json?toke
   bikeshare = JSON.parse(data);
   console.log(bikeshare)
   filterbikeshare = bikeshare
+  getStnDotw(filterbikeshare)
+  getStnPass(filterbikeshare)
   groupStation = _.groupBy(filterbikeshare, function(rec){return rec.name});
   markers = _.toArray(groupStation).forEach(function(record){
     var pathOpts = {'radius': record.length / 20};
@@ -60,84 +67,7 @@ $.ajax('https://raw.githubusercontent.com/BCCghspace/data/main/2018w44.json?toke
 // })
 })
 markersLayer.addTo(map);
-  // groupbyid = [];
-  // bikeshare.reduce(function(res, value) {
-  //   if (!res[value.name]) {
-  //     res[value.name] = { name: value.name, count: 0 };
-  //     groupbyid.push(res[value.name])
-  //   }
-  //   res[value.name].count += value.count;
-  //   res[value.name].start_lat = value.start_lat;
-  //   res[value.name].start_lon = value.start_lon;
-  //   return groupbyid;
-  // }, {});
-  // console.log(groupbyid);
-
-  // var helper = {};
-  // var helper1 = {};
-  // dotwdata = bikeshare.reduce(function(r, o) {
-  //   var key = o.start_station + '-' + o.dotw;
-  //
-  //   if(!helper[key]) {
-  //     helper[key] = Object.assign({}, o); // create a copy of o
-  //     r.push(helper[key]);
-  //   } else {
-  //     helper[key].count += o.count;
-  //   }
-  //
-  //   return r;
-  // }, []);
-  //
-  // console.log(dotwdata);
-  //
-  // passdata = bikeshare.reduce(function(r, o) {
-  //   var key = o.start_station + '-' + o.passholder_type;
-  //
-  //   if(!helper1[key]) {
-  //     helper1[key] = Object.assign({}, o); // create a copy of o
-  //     r.push(helper1[key]);
-  //   } else {
-  //     helper1[key].count += o.count;
-  //   }
-  //
-  //   return r;
-  // }, []);
-
-//   markers = groupbyid.forEach(function(record){
-//     var pathOpts = {'radius': record.count / 30};
-//       marker = L.circleMarker([record.start_lat, record.start_lon], pathOpts)
-//       .bindPopup(record.name + " has " + record.count + " riders.")
-//       .addTo(map)
-//       markersLayer.addLayer(marker);
-// //       .on('click', function(e) {
-// //     console.log(e.latlng);
-// // })
-// ;})
-// markersLayer.addTo(map);
-
 });
-
-//////////////////////////////////////filter data
-// function arrayFromObject(obj) {
-//     var arr = [];
-//     for (var i in obj) {
-//         arr.push(obj[i]);
-//     }
-//     return arr;
-// }
-//
-// function groupBy(list, fn) {
-//     var groups = {};
-//     for (var i = 0; i < list.length; i++) {
-//         var group = JSON.stringify(fn(list[i]));
-//         if (group in groups) {
-//             groups[group].push(list[i]);
-//         } else {
-//             groups[group] = [list[i]];
-//         }
-//     }
-//     return arrayFromObject(groups);
-// }
 
 
 var getDotwFilter = function(){
@@ -148,6 +78,7 @@ var getDotwFilter = function(){
       return true
     }
   } else {
+    dotwall = false
     return function(rec){
       return rec.dotw == dotw
     }
@@ -167,6 +98,59 @@ var getServiceFilter = function(){
   }
 }
 
+var chopkey = function(o){
+  var chopob = _.mapObject(o, function(response){
+    for (var key in response) {
+      if (response.hasOwnProperty(key)) {
+       // creating substring from key name
+        var x = key.substring(11, 19);
+        // in same object creating a new key & value using the
+        // substring and previous value
+        response[x] = response[key];
+        // deleting the old key
+        delete response[key];
+      }
+    }
+    return response;
+  })
+  return chopob
+}
+
+
+var getStnHours = function(bikeShareTrips){
+  groupStation = _.groupBy(bikeShareTrips, function(rec){return rec.name});
+  //console.log(groupStation)
+  countStnHours = _.mapObject(groupStation, function(recgroup){
+    return _.countBy(recgroup,function(rec){
+      return rec.interval60
+    })
+  });
+  countStnHours = chopkey(countStnHours);
+  console.log(countStnHours)
+}
+
+var getStnDotw = function(bikeShareTrips){
+  groupStation = _.groupBy(bikeShareTrips, function(rec){return rec.name});
+  //console.log(groupStation)
+  countStnDotw = _.mapObject(groupStation, function(recgroup){
+    return _.countBy(recgroup,function(rec){
+      return rec.dotw
+    })
+  });
+}
+
+var getStnPass = function(bikeShareTrips){
+  groupStation = _.groupBy(bikeShareTrips, function(rec){return rec.name});
+  //console.log(groupStation)
+  countStnPass = _.mapObject(groupStation, function(recgroup){
+    return _.countBy(recgroup,function(rec){
+      return rec.passholder_type
+    })
+  });
+}
+
+var fallBackZero = function(ref){return ref? ref:0}
+
 $(".record-filters").on("change", function() {
   markersLayer.clearLayers();
   dotwfilter = getDotwFilter()
@@ -174,88 +158,41 @@ $(".record-filters").on("change", function() {
   filterbikeshare = bikeshare.filter(function(rec){
     return dotwfilter(rec) && servicefilter(rec)
   })
+  if(dotwall){
+    getStnDotw(filterbikeshare)
+  } else {
+    getStnHours(filterbikeshare)
+  }
+  getStnPass(filterbikeshare)
 
-  groupStation = _.groupBy(filterbikeshare, function(rec){return rec.name});
-  stndotw = _.toArray(groupStation).map(function(x){_.countBy(x,function(rec){return rec.interval60})})
-  // stndotw = _.groupBy(groupStation[1],function(rec){return rec.dotw})
-  // if(markers){
-  //   // markers.clearLayers();
-  //   markersLayer.clearLayers();
-  //   markers = _.toArray(groupStation).forEach(function(record){
-  //     var pathOpts = {'radius': record.length / 20};
-  //       marker = L.circleMarker([record[0].start_lat, record[0].start_lon], pathOpts)
-  //       .bindPopup(record[0].name + " has " + record[0].count + " riders.")
-  //       markersLayer.addLayer(marker);
-  // //       .on('click', function(e) {
-  // //     console.log(e.latlng);
-  // // })
-  // })
-  // markersLayer.addTo(map);
-  // }
-  // else{
-    // markers.clearLayers();
-    // markersLayer.clearLayers();
     markers = _.toArray(groupStation).forEach(function(record){
       var pathOpts = {'radius': record.length / 20};
         marker = L.circleMarker([record[0].start_lat, record[0].start_lon], pathOpts)
         .bindPopup(record[0].name + " has " + record[0].count + " riders.")
         markersLayer.addLayer(marker);
-  //       .on('click', function(e) {
-  //     console.log(e.latlng);
-  // })
+
   })
   markersLayer.addTo(map);
   // }
 });
 
-/////////////////function count by more than one properties
-// var countbytwo = function(list, key1, key2) {
-//   list.reduce(function (accumulator, list) {
-//     for (i = 0; i < list.length; i++) {
-//       // Group by key1.
-//       accumulator[i].key1s[list[i].key1] = accumulator[i].key1s[list[i].key1] || [];
-//       accumulator[i].key1s[list[i].key1].push(list[i].key2);
-//
-//       // Group by key2.
-//       accumulator[i].key2s[list[i].key2] = accumulator[i].key2s[list[i].key2] || [];
-//       accumulator[i].key2s[list[i].key2].push(list[i].key1);
-//       return accumulator;
-//     }
-//   }, {key1s: {}, key2s: {}});
-// }
 
-
-///var Wed = bikeshare.filter(function(rec){return rec.dotw == "Wed"})
-///_.groupBy(Wed, function(rec){return rec.interval60})
-var linecount = function(dotwall, filterbikeshare){
+var datarec = function(){
   if(dotwall){
-    countrec = _.countBy(filterbikeshare,function(rec){return rec.dotw})
-    return countrec
-  } else {
-    countrec = _.countBy(filterbikeshare,function(rec){return rec.interval60})
-    return countrec
-  }
-}
-
-var piecount = _.countBy(filterbikeshare,function(rec){return rec.passholder_type})
-
-var datarec = function(dotwall, filterbikeshare){
-  countrec = linecount(dotwall, filterbikeshare)
-  if(dotwall){
-    datafl = [countrec.Mon, countrec.Tue, countrec.Wed, countrec.Thu, countrec.Fri, countrec.Sat, countrec.Sun]
+    datafl = [countStnDotw.Mon, countStnDotw.Tue, countStnDotw.Wed, countStnDotw.Thu, countStnDotw.Fri, countStnDotw.Sat, countStnDotw.Sun]
     return datafl
   } else {
-    datafl = [countrec['2018-10-29 00:00:00'], countrec['2018-10-29 01:00:00'], countrec['2018-10-29 02:00:00'], countrec['2018-10-29 03:00:00'],
-              countrec['2018-10-29 04:00:00'], countrec['2018-10-29 05:00:00'], countrec['2018-10-29 06:00:00'], countrec['2018-10-29 07:00:00'],
-              countrec['2018-10-29 08:00:00'], countrec['2018-10-29 09:00:00'], countrec['2018-10-29 10:00:00'], countrec['2018-10-29 11:00:00'],
-              countrec['2018-10-29 12:00:00'], countrec['2018-10-29 13:00:00'], countrec['2018-10-29 14:00:00'], countrec['2018-10-29 15:00:00'],
-              countrec['2018-10-29 16:00:00'], countrec['2018-10-29 17:00:00'], countrec['2018-10-29 18:00:00'], countrec['2018-10-29 19:00:00'],
-              countrec['2018-10-29 20:00:00'], countrec['2018-10-29 21:00:00'], countrec['2018-10-29 22:00:00'], countrec['2018-10-29 23:00:00']]
+    datafl = [fallBackZero(countStnHours['2018-10-29 00:00:00']), fallBackZero(countStnHours['01:00:00']), fallBackZero(countStnHours['02:00:00']), fallBackZero(countStnHours['03:00:00']),
+              fallBackZero(countStnHours['2018-10-29 04:00:00']), fallBackZero(countStnHours['05:00:00']), fallBackZero(countStnHours['06:00:00']), fallBackZero(countStnHours['07:00:00']),
+              fallBackZero(countStnHours['2018-10-29 08:00:00']), fallBackZero(countStnHours['09:00:00']), fallBackZero(countStnHours['10:00:00']), fallBackZero(countStnHours['11:00:00']),
+              fallBackZero(countStnHours['2018-10-29 12:00:00']), fallBackZero(countStnHours['13:00:00']), fallBackZero(countStnHours['14:00:00']), fallBackZero(countStnHours['15:00:00']),
+              fallBackZero(countStnHours['2018-10-29 16:00:00']), fallBackZero(countStnHours['17:00:00']), fallBackZero(countStnHours['18:00:00']), fallBackZero(countStnHours['19:00:00']),
+              fallBackZero(countStnHours['2018-10-29 20:00:00']), fallBackZero(countStnHours['21:00:00']), fallBackZero(countStnHours['22:00:00']), fallBackZero(countStnHours['23:00:00'])]
     return datafl
   }
 }
 
-var chartlabel = function(dotwall){
+var linelabel = function(){
   if(dotwall){
     labelrec = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
     return labelrec
@@ -266,15 +203,15 @@ var chartlabel = function(dotwall){
 }
 
 ////////////////////////////////////////create charts
-var createLineChart = function(dotwall, filterbikeshare) {
+var createLineChart = function() {
   var ctx = document.getElementById('myLineChart').getContext('2d');
   linechart = new Chart(ctx, {
       type: 'line',
       data: {
           labels: 'day of the week / hour of the day',
           datasets: [{
-              label: chartlabel(dotwall),
-              data: datarec(dotwall, filterbikeshare),
+              label: linelabel(),
+              data: datarec(),
               backgroundColor: [
                   'rgba(255, 99, 132, 0.2)'
                   // 'rgba(54, 162, 235, 0.2)',
@@ -306,15 +243,15 @@ var createLineChart = function(dotwall, filterbikeshare) {
   })
 };
 //https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers
-var updateLineChart = function(dotwall, filterbikeshare){
-  datafl = datarec(dotwall, filterbikeshare)
+var updateLineChart = function(){
+  datafl = datarec()
   for (i = 0; i < linechart.data.datasets[0].data.length; i++) {
-  linechart.data.datasets[0].data[i]=datarec(dotwall, filterbikeshare)[i];
+  linechart.data.datasets[0].data[i]=datarec()[i];
   linechart.update();
   }
 }
 
-var createPieChart = function(piecount){
+var createPieChart = function(){
   var ctx = document.getElementById('myPieChart').getContext('2d');
   var piechart = new Chart(ctx, {
       type: 'doughnut',
@@ -322,7 +259,7 @@ var createPieChart = function(piecount){
           labels: ['Indego30','Indego365', 'Day Pass', 'Walk In'],
           datasets: [{
               label: 'Passes',
-              data: [piecount.Indego30, piecount.Indego365, piecount.DayPass, piecount.Walkin],
+              data: [countStnPass.Indego30, countStnPass.Indego365, countStnPass.DayPass, countStnPass.Walkin],
               backgroundColor: [
                   'rgba(255, 99, 132, 0.2)',
                   'rgba(54, 162, 235, 0.2)',
@@ -353,11 +290,11 @@ var createPieChart = function(piecount){
   })
 }
 
-var updatePieChart = function(piecount){
-  piechart.data.datasets[0].data[0]=piecount.Indego30
-  piechart.data.datasets[0].data[1]=piecount.Indego365
-  piechart.data.datasets[0].data[2]=piecount.DayPass
-  piechart.data.datasets[0].data[3]=piecount.Walkin
+var updatePieChart = function(){
+  piechart.data.datasets[0].data[0]=countStnPass.Indego30
+  piechart.data.datasets[0].data[1]=countStnPass.Indego365
+  piechart.data.datasets[0].data[2]=countStnPass.DayPass
+  piechart.data.datasets[0].data[3]=countStnPass.Walkin
   piechart.update()
 }
 
@@ -368,25 +305,19 @@ var updatePieChart = function(piecount){
 
 markersLayer.on("click", markerOnClick);
 var markerOnClick =  function(e){
-    if (barchart){
-      updateBarChart(vaccinationData)
+    if (linechart){
+      updateLineChart()
     } else {
-      createBarChart(vaccinationData)
+      createLineChart()
     }
-
     //set up bar chart
     if (piechart){
-      updatePieChart(populationData, vaccinationData)
+      updatePieChart()
     } else {
-      createPieChart(populationData, vaccinationData)
+      createPieChart()
     }
 }
 
-function markerOnClick(e) {
-  var attributes = e.layer.properties;
-  console.log(attributes.name, attributes.desctiption, attributes.othervars);
-  // do some stuff…
-}
 
 //   L.geoJSON(zipcodeData, {
 //     onEachFeature: function(feat, layer){
