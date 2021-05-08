@@ -18,10 +18,15 @@ var dotwall;
 var countrec;
 var labelrec;
 var datafl;
+var targetName;
 
 var countStnHours;
 var countStnDotw;
 var countStnPass;
+var markerData;
+
+var linechart;
+var piechart;
 
 var marker;
 var markers = [];
@@ -57,10 +62,35 @@ $.ajax('https://raw.githubusercontent.com/BCCghspace/data/main/2018w44.json?toke
   getStnDotw(filterbikeshare)
   getStnPass(filterbikeshare)
   groupStation = _.groupBy(filterbikeshare, function(rec){return rec.name});
-  markers = _.toArray(groupStation).forEach(function(record){
-    var pathOpts = {'radius': record.length / 20};
-      marker = L.circleMarker([record[0].start_lat, record[0].start_lon], pathOpts)
-      .bindPopup(record[0].name + " has " + record[0].count + " riders.")
+  dotwall = true;
+  mapData(groupStation)
+  markers = _.mapObject(markerData, function(record){
+    var pathOpts = {'radius': record.count / 20};
+      marker = L.circleMarker([record.lat, record.lng], pathOpts)
+      .bindPopup(record.name + " has " + record.count + " riders.")
+      .on('click', function (e) {
+        // var popUp = e.sourceTarget._popup._content;
+        // var stnname1 = popUp.split(" has")[0]
+        // stnname1 = String(stnname1)
+        // console.log(stnname1)
+        console.log("first name", record.name)
+        console.log(countStnPass)
+        //document.getElementById('myPieChart').getContext('2d').clearRect(0, 0, document.getElementById('myPieChart').width, document.getElementById('myPieChart').height);
+        if (linechart){
+          updateLineChart(record.name)
+        } else {
+          createLineChart(record.name)
+        }
+        //set up bar chart
+        if (piechart){
+          //piechart.destroy()
+          //document.getElementById('myPieChart').getContext('2d').clearRect(0, 0, document.getElementById('myPieChart').width, document.getElementById('myPieChart').height);
+          updatePieChart(record.name)
+        } else {
+          createPieChart(record.name)
+          //document.getElementById('myPieChart').getContext('2d').clearRect(0, 0, document.getElementById('myPieChart').width, document.getElementById('myPieChart').height);
+        }
+      })
       markersLayer.addLayer(marker);
 //       .on('click', function(e) {
 //     console.log(e.latlng);
@@ -126,7 +156,7 @@ var getStnHours = function(bikeShareTrips){
     })
   });
   countStnHours = chopkey(countStnHours);
-  console.log(countStnHours)
+  console.log("countstnhours",countStnHours)
 }
 
 var getStnDotw = function(bikeShareTrips){
@@ -137,6 +167,7 @@ var getStnDotw = function(bikeShareTrips){
       return rec.dotw
     })
   });
+  console.log("countstndotw",countStnDotw)
 }
 
 var getStnPass = function(bikeShareTrips){
@@ -147,53 +178,82 @@ var getStnPass = function(bikeShareTrips){
       return rec.passholder_type
     })
   });
+  console.log("countstnpass",countStnPass)
+}
+///not working?
+var mapData = function (groupStn){
+  markerData = _.mapObject(groupStn, function(arrOfObj){
+    return {
+      'name':arrOfObj[0].name, 'lat':arrOfObj[0].start_lat, 'lng':arrOfObj[0].start_lon, 'count':arrOfObj.length
+    }
+  })
+  return markerData
 }
 
 var fallBackZero = function(ref){return ref? ref:0}
 
 $(".record-filters").on("change", function() {
+  dotwall = false;
   markersLayer.clearLayers();
   dotwfilter = getDotwFilter()
   servicefilter = getServiceFilter()
   filterbikeshare = bikeshare.filter(function(rec){
     return dotwfilter(rec) && servicefilter(rec)
   })
-  if(dotwall){
+  if(dotwall == true){
     getStnDotw(filterbikeshare)
   } else {
     getStnHours(filterbikeshare)
   }
   getStnPass(filterbikeshare)
+  mapData(groupStation)
+  markers = _.mapObject(markerData, function(record){
+    var pathOpts = {'radius': record.count / 20};
+      marker = L.circleMarker([record.lat, record.lng], pathOpts)
+      .bindPopup(record.name + " has " + record.count + " riders.")
+      .on('click', function (e) {
+        // var popUp = e.sourceTarget._popup._content;
+        // var stnname1 = popUp.split(" has")[0]
+        // stnname1 = String(stnname1)
+        // console.log(stnname1)
+        console.log(countStnPass)
+        if (linechart){
+          updateLineChart(record.name)//give recor.name to access
+        } else {
+          createLineChart(record.name)
+        }
+        //set up bar chart
+        if (piechart){
+          updatePieChart(record.name)
+        } else {
+          createPieChart(record.name)
+        }
+      })
 
-    markers = _.toArray(groupStation).forEach(function(record){
-      var pathOpts = {'radius': record.length / 20};
-        marker = L.circleMarker([record[0].start_lat, record[0].start_lon], pathOpts)
-        .bindPopup(record[0].name + " has " + record[0].count + " riders.")
-        markersLayer.addLayer(marker);
-
+  markersLayer.addLayer(marker);
   })
   markersLayer.addTo(map);
   // }
 });
 
 
-var datarec = function(){
-  if(dotwall){
-    datafl = [countStnDotw.Mon, countStnDotw.Tue, countStnDotw.Wed, countStnDotw.Thu, countStnDotw.Fri, countStnDotw.Sat, countStnDotw.Sun]
+var datarec = function(stnname){//station name
+  if(dotwall == true){
+    datafl = [fallBackZero(countStnDotw[stnname].Mon), fallBackZero(countStnDotw[stnname].Tue),fallBackZero(countStnDotw[stnname].Wed), fallBackZero(countStnDotw[stnname].Thu), fallBackZero(countStnDotw[stnname].Fri), fallBackZero(countStnDotw[stnname].Sat), fallBackZero(countStnDotw[stnname].Sun)]
     return datafl
   } else {
-    datafl = [fallBackZero(countStnHours['2018-10-29 00:00:00']), fallBackZero(countStnHours['01:00:00']), fallBackZero(countStnHours['02:00:00']), fallBackZero(countStnHours['03:00:00']),
-              fallBackZero(countStnHours['2018-10-29 04:00:00']), fallBackZero(countStnHours['05:00:00']), fallBackZero(countStnHours['06:00:00']), fallBackZero(countStnHours['07:00:00']),
-              fallBackZero(countStnHours['2018-10-29 08:00:00']), fallBackZero(countStnHours['09:00:00']), fallBackZero(countStnHours['10:00:00']), fallBackZero(countStnHours['11:00:00']),
-              fallBackZero(countStnHours['2018-10-29 12:00:00']), fallBackZero(countStnHours['13:00:00']), fallBackZero(countStnHours['14:00:00']), fallBackZero(countStnHours['15:00:00']),
-              fallBackZero(countStnHours['2018-10-29 16:00:00']), fallBackZero(countStnHours['17:00:00']), fallBackZero(countStnHours['18:00:00']), fallBackZero(countStnHours['19:00:00']),
-              fallBackZero(countStnHours['2018-10-29 20:00:00']), fallBackZero(countStnHours['21:00:00']), fallBackZero(countStnHours['22:00:00']), fallBackZero(countStnHours['23:00:00'])]
+    datafl = [fallBackZero(countStnHours[stnname]['00:00:00']), fallBackZero(countStnHours[stnname]['01:00:00']), fallBackZero(countStnHours[stnname]['02:00:00']), fallBackZero(countStnHours[stnname]['03:00:00']),
+              fallBackZero(countStnHours[stnname]['04:00:00']), fallBackZero(countStnHours[stnname]['05:00:00']), fallBackZero(countStnHours[stnname]['06:00:00']), fallBackZero(countStnHours[stnname]['07:00:00']),
+              fallBackZero(countStnHours[stnname]['08:00:00']), fallBackZero(countStnHours[stnname]['09:00:00']), fallBackZero(countStnHours[stnname]['10:00:00']), fallBackZero(countStnHours[stnname]['11:00:00']),
+              fallBackZero(countStnHours[stnname]['12:00:00']), fallBackZero(countStnHours[stnname]['13:00:00']), fallBackZero(countStnHours[stnname]['14:00:00']), fallBackZero(countStnHours[stnname]['15:00:00']),
+              fallBackZero(countStnHours[stnname]['16:00:00']), fallBackZero(countStnHours[stnname]['17:00:00']), fallBackZero(countStnHours[stnname]['18:00:00']), fallBackZero(countStnHours[stnname]['19:00:00']),
+              fallBackZero(countStnHours[stnname]['20:00:00']), fallBackZero(countStnHours[stnname]['21:00:00']), fallBackZero(countStnHours[stnname]['22:00:00']), fallBackZero(countStnHours[stnname]['23:00:00'])]
     return datafl
   }
 }
 
 var linelabel = function(){
-  if(dotwall){
+  if(dotwall == true){
     labelrec = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
     return labelrec
   } else {
@@ -203,15 +263,17 @@ var linelabel = function(){
 }
 
 ////////////////////////////////////////create charts
-var createLineChart = function() {
+var createLineChart = function(stationName) {
   var ctx = document.getElementById('myLineChart').getContext('2d');
+  console.log("name", stationName)
+  console.log("data", datarec(stationName))
   linechart = new Chart(ctx, {
       type: 'line',
       data: {
-          labels: 'day of the week / hour of the day',
+          labels: linelabel(),
           datasets: [{
-              label: linelabel(),
-              data: datarec(),
+              label: ['biking demand'],
+              data: datarec(stationName),
               backgroundColor: [
                   'rgba(255, 99, 132, 0.2)'
                   // 'rgba(54, 162, 235, 0.2)',
@@ -243,15 +305,13 @@ var createLineChart = function() {
   })
 };
 //https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers
-var updateLineChart = function(){
-  datafl = datarec()
-  for (i = 0; i < linechart.data.datasets[0].data.length; i++) {
-  linechart.data.datasets[0].data[i]=datarec()[i];
+var updateLineChart = function(stationName){
+  linechart.data.datasets.data= datarec(stationName);
+  linechart.data.labels = linelabel();
   linechart.update();
-  }
 }
 
-var createPieChart = function(){
+var createPieChart = function(stationName){
   var ctx = document.getElementById('myPieChart').getContext('2d');
   var piechart = new Chart(ctx, {
       type: 'doughnut',
@@ -259,7 +319,7 @@ var createPieChart = function(){
           labels: ['Indego30','Indego365', 'Day Pass', 'Walk In'],
           datasets: [{
               label: 'Passes',
-              data: [countStnPass.Indego30, countStnPass.Indego365, countStnPass.DayPass, countStnPass.Walkin],
+              data: [fallBackZero(countStnPass[stationName].Indego30), fallBackZero(countStnPass[stationName].Indego365), fallBackZero(countStnPass[stationName].DayPass), fallBackZero(countStnPass[stationName].Walkin)],
               backgroundColor: [
                   'rgba(255, 99, 132, 0.2)',
                   'rgba(54, 162, 235, 0.2)',
@@ -290,33 +350,27 @@ var createPieChart = function(){
   })
 }
 
-var updatePieChart = function(){
-  piechart.data.datasets[0].data[0]=countStnPass.Indego30
-  piechart.data.datasets[0].data[1]=countStnPass.Indego365
-  piechart.data.datasets[0].data[2]=countStnPass.DayPass
-  piechart.data.datasets[0].data[3]=countStnPass.Walkin
-  piechart.update()
-}
+// var updatePieChart = function(stationName){
+//   piechart.data.datasets[0].data[0]=countStnPass[stationName].Indego30
+//   piechart.data.datasets[0].data[1]=countStnPass[stationName].Indego365
+//   piechart.data.datasets[0].data[2]=countStnPass[stationName].DayPass
+//   piechart.data.datasets[0].data[3]=countStnPass[stationName].Walkin
+//   piechart.update()
+// }
 
+var updatePieChart = function(stationName){
+  console.log(countStnPass)
+  document.getElementById('myPieChart').getContext('2d').clearRect(0, 0, document.getElementById('myPieChart').width, document.getElementById('myPieChart').height);
+  piechart.data.datasets.data= [fallBackZero(countStnPass[stationName].Indego30), fallBackZero(countStnPass[stationName].Indego365), fallBackZero(countStnPass[stationName].DayPass), fallBackZero(countStnPass[stationName].Walkin)]
+  piechart.update();
+}
 // $.when($.ajax(zipcodeURL), $.ajax(zipcodeVaccURL), $.ajax(zipcodePopURL)).then(function(zipcodeRes, zipcodeVaccRes, zipcodePopRes) {
 //   zipcodeData = JSON.parse(zipcodeRes[0])
 //   zipcodeVaccData = JSON.parse(zipcodeVaccRes[0])
 //   zipcodePopData = JSON.parse(zipcodePopRes[0])
+// console.log(markersLayer)
+// marker.on("click", markerOnClick);
 
-markersLayer.on("click", markerOnClick);
-var markerOnClick =  function(e){
-    if (linechart){
-      updateLineChart()
-    } else {
-      createLineChart()
-    }
-    //set up bar chart
-    if (piechart){
-      updatePieChart()
-    } else {
-      createPieChart()
-    }
-}
 
 
 //   L.geoJSON(zipcodeData, {
