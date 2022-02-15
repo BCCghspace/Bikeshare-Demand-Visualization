@@ -55,7 +55,7 @@ var Stamen_TonerLite = L.tileLayer('http://stamen-tiles-{s}.a.ssl.fastly.net/ton
 
 ////////////////////////////////////////read in data
 
-$.ajax('https://raw.githubusercontent.com/BCCghspace/data/main/2018w44.json?token=AQ2OW55RCWLAFPB3VUVAW2TAVVK5S').done(function(data) {
+$.ajax('https://raw.githubusercontent.com/BCCghspace/data/main/2018w44.json?token=GHSAT0AAAAAABMG33HPCYPIH55ZBJYQIZ22YQULKJQ').done(function(data) {
   bikeshare = JSON.parse(data);
   console.log(bikeshare)
   filterbikeshare = bikeshare
